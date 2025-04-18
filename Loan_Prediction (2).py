@@ -1,150 +1,130 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import shap
 import matplotlib.pyplot as plt
-import seaborn as sns
 
-class LoanPredictor:
-    def __init__(self):
-        self.model = None
-        self.education_map = {}
-        self.default_map = {}
-        self.load_all()
+# --- Load Model & Mapping ---
+def load_model_and_maps():
+    with open('best_xgb_model.pkl', 'rb') as f:
+        model = pickle.load(f)
+    with open('education_map.pkl', 'rb') as f:
+        education_map = pickle.load(f)
+    with open('default_map.pkl', 'rb') as f:
+        default_map = pickle.load(f)
+    return model, education_map, default_map
 
-    def load_all(self):
-        st.write("🚀 Memuat model dan mapping...")
+model, education_map, default_map = load_model_and_maps()
 
-        try:
-            with open('best_xgb_model.pkl', 'rb') as f:
-                self.model = pickle.load(f)
-                st.success("✅ Model berhasil dimuat.")
-        except Exception as e:
-            st.error(f"❌ Gagal load model: {type(e).__name__} - {e}")
+# --- Custom UI Style ---
+st.set_page_config(page_title="Prediksi Pinjaman", page_icon="💰", layout="centered")
+st.markdown("""
+    <style>
+        html, body {
+            background-color: #f7f9fb;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .main-title {
+            font-size: 42px;
+            font-weight: 700;
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .predict-button {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            transition: 0.3s;
+        }
+        .predict-button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-        try:
-            with open('education_map.pkl', 'rb') as f:
-                self.education_map = pickle.load(f)
-                st.success("✅ Mapping pendidikan berhasil dimuat.")
-        except Exception as e:
-            st.error(f"❌ Gagal load education_map: {type(e).__name__} - {e}")
+# --- Judul UI ---
+st.markdown("<div class='main-title'>💳 Prediksi Kelolosan Pinjaman</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Masukkan informasi untuk melihat apakah pinjaman akan disetujui</div>", unsafe_allow_html=True)
 
-        try:
-            with open('default_map.pkl', 'rb') as f:
-                self.default_map = pickle.load(f)
-                st.success("✅ Mapping gagal bayar berhasil dimuat.")
-        except Exception as e:
-            st.error(f"❌ Gagal load default_map: {type(e).__name__} - {e}")
+# --- Form Input ---
+with st.form("loan_form"):
+    col1, col2 = st.columns(2)
 
-    def predict(self, data):
-        if self.model is None:
-            st.error("Model belum dimuat. Tidak bisa melakukan prediksi.")
-            return None, None
+    with col1:
+        age = st.slider("Usia", 18, 80, 25)
+        emp_exp = st.slider("Pengalaman Kerja (tahun)", 0, 50, 5)
+        cred_hist_len = st.slider("Lama Riwayat Kredit (tahun)", 0, 30, 5)
+        credit_score = st.slider("Skor Kredit", 300, 850, 600)
+        education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
+        previous_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
 
-        df = pd.DataFrame([data])
-        expected_features = self.model.get_booster().feature_names
-        st.write("📋 Fitur yang diharapkan model:", expected_features)
-        df = df.reindex(columns=expected_features, fill_value=0)
-        result = self.model.predict(df)[0]
-        return result, df
+    with col2:
+        income = st.number_input("Pendapatan Tahunan ($)", min_value=1, value=50000, step=1000)
+        loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=1, value=10000, step=500)
+        loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0, value=12.0, step=0.1)
+        gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
+        home_ownership = st.selectbox("Status Tempat Tinggal", ['Own', 'Rent', 'Mortgage', 'Other'])
+        loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
 
-    def show_prediction_form(self):
-        st.subheader("📋 Formulir Pengajuan Pinjaman")
+    submitted = st.form_submit_button("🔍 Prediksi Sekarang")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
-            home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
+# --- Prediksi ---
+if submitted:
+    loan_percent_income = loan_amount / income
 
-            if self.education_map:
-                education = st.selectbox("Pendidikan Terakhir", list(self.education_map.keys()))
-            else:
-                education = st.text_input("Pendidikan Terakhir (teks manual)")
-            
-            if self.default_map:
-                previous_default = st.selectbox("Pernah Gagal Bayar?", list(self.default_map.keys()))
-            else:
-                previous_default = st.text_input("Gagal Bayar? (Yes/No)")
+    input_dict = {
+        "person_age": age,
+        "person_education": education_map[education],
+        "person_income": income,
+        "person_emp_exp": emp_exp,
+        "loan_amnt": loan_amount,
+        "loan_int_rate": loan_int_rate,
+        "loan_percent_income": loan_percent_income,
+        "cb_person_cred_hist_length": cred_hist_len,
+        "credit_score": credit_score,
+        "previous_loan_defaults_on_file": default_map[previous_default],
+        "person_gender_male": 1 if gender == "Male" else 0,
+        "person_home_ownership_OWN": 1 if home_ownership == "Own" else 0,
+        "person_home_ownership_RENT": 1 if home_ownership == "Rent" else 0,
+        "person_home_ownership_OTHER": 1 if home_ownership == "Other" else 0,
+        "loan_intent_EDUCATION": 1 if loan_intent == "EDUCATION" else 0,
+        "loan_intent_HOMEIMPROVEMENT": 1 if loan_intent == "HOMEIMPROVEMENT" else 0,
+        "loan_intent_MEDICAL": 1 if loan_intent == "MEDICAL" else 0,
+        "loan_intent_PERSONAL": 1 if loan_intent == "PERSONAL" else 0,
+        "loan_intent_VENTURE": 1 if loan_intent == "VENTURE" else 0,
+    }
 
-        with col2:
-            income = st.number_input("Pendapatan Tahunan ($)", min_value=0, step=1000)
-            loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=0, step=1000)
-            loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0, step=0.1)
-            loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
+    input_df = pd.DataFrame([input_dict])
+    expected_features = model.get_booster().feature_names
+    input_df = input_df.reindex(columns=expected_features, fill_value=0)
 
-        if st.button("🔍 Prediksi Sekarang"):
-            try:
-                input_data = {
-                    'person_income': income,
-                    'person_education': self.education_map.get(education, 0),
-                    'loan_amnt': loan_amount,
-                    'loan_int_rate': loan_int_rate,
-                    'previous_loan_defaults_on_file': self.default_map.get(previous_default, 0),
-                    'person_gender_Male': 1 if gender == 'Male' else 0,
-                    'person_home_ownership_Own': 1 if home_ownership == 'Own' else 0,
-                    'person_home_ownership_Rent': 1 if home_ownership == 'Rent' else 0,
-                    'person_home_ownership_Mortgage': 1 if home_ownership == 'Mortgage' else 0,
-                    'loan_intent_EDUCATION': 1 if loan_intent == 'EDUCATION' else 0,
-                    'loan_intent_HOMEIMPROVEMENT': 1 if loan_intent == 'HOMEIMPROVEMENT' else 0,
-                    'loan_intent_MEDICAL': 1 if loan_intent == 'MEDICAL' else 0,
-                    'loan_intent_PERSONAL': 1 if loan_intent == 'PERSONAL' else 0,
-                    'loan_intent_VENTURE': 1 if loan_intent == 'VENTURE' else 0,
-                    'loan_intent_DEBTCONSOLIDATION': 1 if loan_intent == 'DEBTCONSOLIDATION' else 0,
-                }
+    prediction = model.predict(input_df)[0]
 
-                st.write("📦 Data untuk prediksi:")
-                st.json(input_data)
+    st.markdown("---")
+    if prediction == 1:
+        st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! 🎉")
+    else:
+        st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**. Coba cek ulang datamu.")
 
-                prediction, df = self.predict(input_data)
-                if prediction is not None:
-                    st.markdown("---")
-                    if prediction == 1:
-                        st.success("✅ Pinjaman kemungkinan **DISETUJUI**!")
-                    else:
-                        st.error("❌ Pinjaman kemungkinan **DITOLAK**.")
-            except Exception as e:
-                st.error(f"⚠️ Terjadi error saat prediksi: {type(e).__name__} - {e}")
+    # --- SHAP Explanation ---
+    st.markdown("### 🔍 Penjelasan Model (SHAP)")
 
-    def show_visualization(self):
-        st.subheader("📊 Visualisasi Data Pinjaman")
-        try:
-            df = pd.read_csv("data_pinjaman.csv")  # Ganti sesuai nama dataset kamu
-            st.success("✅ Dataset berhasil dimuat.")
-        except Exception as e:
-            st.error(f"❌ Gagal memuat dataset: {type(e).__name__} - {e}")
-            return
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(input_df)
 
-        option = st.selectbox("Pilih kolom untuk distribusi:", ['person_income', 'loan_amnt', 'loan_int_rate'])
-
-        fig, ax = plt.subplots()
-        sns.histplot(df[option], bins=30, kde=True, color="skyblue", ax=ax)
-        ax.set_title(f"Distribusi {option}")
-        ax.set_xlabel(option)
-        ax.set_ylabel("Jumlah")
-        st.pyplot(fig)
-
-        st.markdown("#### 🔎 Distribusi Tujuan Pinjaman")
-        fig2, ax2 = plt.subplots()
-        sns.countplot(x="loan_intent", data=df, order=df["loan_intent"].value_counts().index, palette="viridis", ax=ax2)
-        ax2.set_title("Distribusi Tujuan Pinjaman")
-        ax2.set_ylabel("Jumlah")
-        ax2.set_xlabel("Loan Intent")
-        plt.xticks(rotation=30)
-        st.pyplot(fig2)
-
-# --- Main Streamlit App ---
-def main():
-    st.title("🛠 Debug Mode - Prediksi Pinjaman")
-    menu = ["🏠 Home", "📋 Form Prediksi", "📊 Visualisasi Data"]
-    choice = st.sidebar.selectbox("Navigasi", menu)
-
-    app = LoanPredictor()
-
-    if choice == "🏠 Home":
-        st.markdown("Selamat datang di mode debug. Periksa log dan mapping file sebelum lanjut.")
-    elif choice == "📋 Form Prediksi":
-        app.show_prediction_form()
-    elif choice == "📊 Visualisasi Data":
-        app.show_visualization()
-
-if __name__ == '__main__':
-    main()
+    st.markdown("Fitur mana yang paling berpengaruh terhadap keputusan model?")
+    fig, ax = plt.subplots()
+    shap.plots.waterfall(shap.Explanation(values=shap_values[0],
+                                          base_values=explainer.expected_value,
+                                          data=input_df.iloc[0]), max_display=12, show=False)
+    st.pyplot(fig)
