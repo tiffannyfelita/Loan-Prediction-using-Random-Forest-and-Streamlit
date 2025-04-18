@@ -51,15 +51,36 @@ class LoanPredictor:
         result = self.model.predict(df)[0]
         return result, df
 
-    def explain_prediction(self, df):
-        explainer = shap.TreeExplainer(self.model)
-        shap_values = explainer.shap_values(df)
-        st.subheader("🔍 Penjelasan Prediksi Model")
-        st.markdown("Berikut adalah fitur-fitur yang paling memengaruhi keputusan model:")
-        shap.plots.waterfall(shap.Explanation(values=shap_values[0],
-                                              base_values=explainer.expected_value,
-                                              data=df.iloc[0]), max_display=12, show=False)
-        st.pyplot(bbox_inches='tight')
+def explain_prediction(self, df):
+    explainer = shap.TreeExplainer(self.model)
+    shap_values = explainer.shap_values(df)
+
+    st.subheader("🔍 Penjelasan Prediksi Model (SHAP)")
+
+    # Waterfall plot - untuk prediksi individu
+    st.markdown("#### 📌 Waterfall Plot (Penjelasan Prediksi Individu)")
+    shap.plots.waterfall(
+        shap.Explanation(values=shap_values[0],
+                         base_values=explainer.expected_value,
+                         data=df.iloc[0]),
+        max_display=12, show=False
+    )
+    st.pyplot(bbox_inches='tight')
+
+    # Summary Plot
+    st.markdown("#### 📊 Summary Plot (Feature Importance Global)")
+    fig_summary = plt.figure()
+    shap.summary_plot(shap_values, df, show=False)
+    st.pyplot(fig_summary)
+
+    # Bar Plot
+    st.markdown("#### 📋 Bar Plot (Ranking Pengaruh Fitur)")
+    fig_bar = plt.figure()
+    shap.plots.bar(shap.Explanation(values=shap_values,
+                                    base_values=explainer.expected_value,
+                                    data=df), show=False)
+    st.pyplot(fig_bar)
+
 
     def show_prediction_form(self):
         st.subheader("📋 Formulir Pengajuan Pinjaman")
