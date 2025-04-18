@@ -9,3 +9,4 @@ xgboost
 scikit-learn
 pandas
 streamlit
+pip install streamlit pandas shap matplotlib seaborn xgboost scikit-learn
