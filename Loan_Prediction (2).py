@@ -24,7 +24,7 @@ if choice == "Prediksi":
     st.markdown("Masukkan informasi lengkap untuk memprediksi apakah pinjaman akan disetujui.")
 
     with st.form("loan_form"):
-        st.slider("Umur Pemohon", 18, 100, 30, key="person_age")
+        st.slider("Umur Pemohon", 18, 144, 30, key="person_age")
         st.slider("Lama Bekerja (tahun)", 0, 40, 5, key="person_emp_exp")
         st.slider("Panjang Riwayat Kredit (tahun)", 0, 30, 3, key="cb_person_cred_hist_length")
         st.slider("Skor Kredit (300-850)", 300, 850, 600, key="credit_score")
