@@ -12,16 +12,12 @@ with open('education_map.pkl', 'rb') as f:
 with open('default_map.pkl', 'rb') as f:
     default_map = pickle.load(f)
 
-# --- Kategori Mapping untuk Fitur Categorical ---
+# --- Mapping Kategori ---
 gender_map = {'Male': 1, 'Female': 0}
 home_map = {'Own': 1, 'Rent': 2, 'Mortgage': 3, 'Other': 4}
 intent_map = {
-    'EDUCATION': 0,
-    'VENTURE': 1,
-    'PERSONAL': 2,
-    'MEDICAL': 3,
-    'HOMEIMPROVEMENT': 4,
-    'DEBTCONSOLIDATION': 5
+    'EDUCATION': 0, 'VENTURE': 1, 'PERSONAL': 2,
+    'MEDICAL': 3, 'HOMEIMPROVEMENT': 4, 'DEBTCONSOLIDATION': 5
 }
 
 # --- UI Styling ---
@@ -37,7 +33,7 @@ st.markdown("""
         font-weight: bold;
         color: #34495E;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }
     .subheader {
         font-size: 18px;
@@ -49,7 +45,7 @@ st.markdown("""
         background-color: #FFFFFF;
         padding: 30px;
         border-radius: 12px;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
         margin: 20px 0;
     }
     .success-message {
@@ -67,10 +63,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<p class="header">💳 Prediksi Kelolosan Pinjaman</p>', unsafe_allow_html=True)
-st.markdown('<p class="subheader">Masukkan data di bawah untuk melihat apakah pinjaman akan disetujui</p>', unsafe_allow_html=True)
+# --- Header ---
+st.markdown('<div class="header">💳 Prediksi Kelolosan Pinjaman</div>', unsafe_allow_html=True)
+st.markdown('<div class="subheader">Masukkan data lengkap untuk memprediksi apakah pinjaman akan disetujui</div>', unsafe_allow_html=True)
 
-# --- Form ---
+# --- Form Input ---
 with st.container():
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
     with st.form("loan_form"):
@@ -82,8 +79,8 @@ with st.container():
             education = st.selectbox("Pendidikan", list(education_map.keys()))
             income = st.number_input("Pendapatan Tahunan ($)", min_value=1000, value=50000, step=1000)
             emp_exp = st.slider("Pengalaman Kerja (tahun)", 0, 50, 5)
-            credit_score = st.slider("Skor Kredit", 300, 850, 650)
-            previous_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
+            credit_score = st.slider("Skor Kredit (300 - 850)", 300, 850, 650)
+            prev_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
 
         with col2:
             home = st.selectbox("Status Tempat Tinggal", list(home_map.keys()))
@@ -95,9 +92,9 @@ with st.container():
         submitted = st.form_submit_button("🔍 Prediksi Sekarang")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Prediction Logic ---
+# --- Prediksi ---
 if submitted:
-    input_dict = {
+    input_data = {
         'person_age': age,
         'person_gender': gender_map[gender],
         'person_education': education_map[education],
@@ -110,16 +107,25 @@ if submitted:
         'loan_percent_income': loan_amount / income,
         'cb_person_cred_hist_length': cred_hist,
         'credit_score': credit_score,
-        'previous_loan_defaults_on_file': default_map[previous_default],
+        'previous_loan_defaults_on_file': default_map[prev_default],
     }
 
-    input_df = pd.DataFrame([input_dict])
+    input_df = pd.DataFrame([input_data])
     prediction = model.predict(input_df)[0]
 
     st.markdown("---")
     if prediction == 1:
         st.markdown('<p class="success-message">✅ Pinjaman kamu kemungkinan <b>DISETUJUI</b>! 🎉</p>', unsafe_allow_html=True)
     else:
-        st.markdown('<p class="error-message">❌ Pinjaman kamu kemungkinan <b>DITOLAK</b>. Periksa kembali data kamu.</p>', unsafe_allow_html=True)
+        st.markdown('<p class="error-message">❌ Pinjaman kamu kemungkinan <b>DITOLAK</b>. Coba perbaiki informasi yang kurang kuat.</p>', unsafe_allow_html=True)
 
     st.markdown("---")
+    with st.expander("Apa itu Skor Kredit?"):
+        st.write("""
+        **Skor Kredit** adalah angka dari 300–850 yang mencerminkan kepercayaan finansial seseorang.
+        
+        - **Skor tinggi** berarti kamu punya riwayat pembayaran yang baik.
+        - **Skor rendah** bisa karena sering telat bayar, atau belum punya riwayat pinjaman.
+        
+        **Semakin tinggi skor kamu, semakin besar kemungkinan pinjaman disetujui.**
+        """)
