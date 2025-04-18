@@ -16,27 +16,29 @@ def load_model_and_maps():
 
 model, education_map, default_map = load_model_and_maps()
 
-# --- UI Styling ---
+# --- Mapping kategori lain ---
+gender_map = {'Male': 1, 'Female': 0}
+home_map = {'Own': 1, 'Rent': 2, 'Mortgage': 3, 'Other': 4}
+intent_map = {
+    'EDUCATION': 0,
+    'VENTURE': 1,
+    'PERSONAL': 2,
+    'MEDICAL': 3,
+    'HOMEIMPROVEMENT': 4,
+    'DEBTCONSOLIDATION': 5
+}
+
+# --- UI ---
 st.set_page_config(page_title="Prediksi Pinjaman", page_icon="💰", layout="centered")
 st.markdown("""
     <style>
-    .title {
-        font-size: 38px;
-        font-weight: 700;
-        text-align: center;
-        color: #2c3e50;
-    }
-    .subtitle {
-        text-align: center;
-        font-size: 16px;
-        color: #7f8c8d;
-        margin-bottom: 30px;
-    }
+    .title { font-size: 38px; font-weight: 700; text-align: center; color: #2c3e50; }
+    .subtitle { text-align: center; font-size: 16px; color: #7f8c8d; margin-bottom: 30px; }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<div class='title'>💳 Prediksi Kelolosan Pinjaman</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Isi informasi kamu di bawah ini untuk melihat apakah pinjaman akan disetujui</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Isi informasi di bawah untuk melihat kemungkinan pinjaman disetujui</div>", unsafe_allow_html=True)
 
 # --- Form Input ---
 with st.form("loan_form"):
@@ -44,33 +46,33 @@ with st.form("loan_form"):
 
     with col1:
         age = st.slider("Usia", 18, 80, 30)
-        gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
+        gender = st.selectbox("Jenis Kelamin", list(gender_map.keys()))
         education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
         income = st.number_input("Pendapatan Tahunan ($)", min_value=1000, value=50000, step=1000)
         emp_exp = st.slider("Lama Bekerja (tahun)", 0, 40, 5)
-        credit_score = st.slider("Skor Kredit (300–850)", 300, 850, 650)
+        credit_score = st.slider("Skor Kredit", 300, 850, 650)
         previous_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
 
     with col2:
-        home_ownership = st.selectbox("Status Tempat Tinggal", ['Own', 'Rent', 'Mortgage', 'Other'])
+        home_ownership = st.selectbox("Status Tempat Tinggal", list(home_map.keys()))
         loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=1000, value=10000, step=500)
         loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0, value=12.0, step=0.1)
-        loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
+        loan_intent = st.selectbox("Tujuan Pinjaman", list(intent_map.keys()))
         cred_hist_len = st.slider("Lama Riwayat Kredit (tahun)", 0, 30, 8)
 
     submitted = st.form_submit_button("🔍 Prediksi Sekarang")
 
-# --- Prediksi & Output ---
+# --- Prediksi ---
 if submitted:
     input_dict = {
         'person_age': age,
-        'person_gender': gender,
+        'person_gender': gender_map[gender],
         'person_education': education_map[education],
         'person_income': income,
         'person_emp_exp': emp_exp,
-        'person_home_ownership': home_ownership,
+        'person_home_ownership': home_map[home_ownership],
         'loan_amnt': loan_amount,
-        'loan_intent': loan_intent,
+        'loan_intent': intent_map[loan_intent],
         'loan_int_rate': loan_int_rate,
         'loan_percent_income': loan_amount / income,
         'cb_person_cred_hist_length': cred_hist_len,
@@ -85,7 +87,7 @@ if submitted:
     if prediction == 1:
         st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! 🎉")
     else:
-        st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**.")
+        st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**. Coba periksa kembali datamu.")
 
     # --- SHAP Explanation ---
     st.markdown("### 🔍 Penjelasan Prediksi (SHAP)")
