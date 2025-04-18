@@ -2,7 +2,6 @@ import streamlit as st
 import pickle
 import pandas as pd
 
-
 # --- Load Model & Mapping ---
 with open('best_xgb_model.pkl', 'rb') as f:
     model = pickle.load(f)
@@ -15,26 +14,66 @@ with open('default_map.pkl', 'rb') as f:
 
 # --- UI Styling ---
 st.set_page_config(page_title="Prediksi Pinjaman", page_icon="💰", layout="centered")
-st.title("💳 Prediksi Kelolosan Pinjaman")
-st.markdown("Masukkan detail di bawah untuk memprediksi apakah **pinjaman akan disetujui** atau tidak.")
+st.markdown(
+    """
+    <style>
+    .header {
+        font-size: 36px;
+        font-weight: bold;
+        color: #2E86C1;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .subheader {
+        font-size: 20px;
+        color: #5DADE2;
+        margin-bottom: 20px;
+    }
+    .success-message {
+        font-size: 24px;
+        color: #27AE60;
+        text-align: center;
+    }
+    .error-message {
+        font-size: 24px;
+        color: #E74C3C;
+        text-align: center;
+    }
+    .form-container {
+        background-color: #F8F9F9;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Header
+st.markdown('<p class="header">💳 Prediksi Kelolosan Pinjaman</p>', unsafe_allow_html=True)
+st.markdown('<p class="subheader">Masukkan detail di bawah untuk memprediksi apakah pinjaman akan disetujui atau tidak.</p>', unsafe_allow_html=True)
 
 # --- Form Input User ---
-with st.form("loan_form"):
-    col1, col2 = st.columns(2)
+with st.container():
+    st.markdown('<div class="form-container">', unsafe_allow_html=True)
+    with st.form("loan_form"):
+        col1, col2 = st.columns(2)
 
-    with col1:
-        gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
-        home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
-        education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
-        previous_default = st.selectbox("Pernah Gagal Bayar?", ['No', 'Yes'])
+        with col1:
+            gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
+            home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
+            education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
+            previous_default = st.selectbox("Pernah Gagal Bayar?", ['No', 'Yes'])
 
-    with col2:
-        income = st.number_input("Pendapatan Tahunan ($)", min_value=0)
-        loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=0)
-        loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0)
-        loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
+        with col2:
+            income = st.number_input("Pendapatan Tahunan ($)", min_value=0, step=1000)
+            loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=0, step=1000)
+            loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0, step=0.1)
+            loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
 
-    submitted = st.form_submit_button("🔍 Prediksi Sekarang")
+        submitted = st.form_submit_button("🔍 Prediksi Sekarang")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Proses Prediksi ---
 if submitted:
@@ -61,10 +100,12 @@ if submitted:
     input_df = input_df.reindex(columns=expected_features, fill_value=0)
     prediction = model.predict(input_df)[0]
 
-
     # --- Hasil ---
     st.markdown("---")
     if prediction == 1:
-        st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
+        st.markdown('<p class="success-message">✅ Pinjaman kamu kemungkinan <b>DISETUJUI</b>! Selamat! 🎉</p>', unsafe_allow_html=True)
     else:
-        st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**. Coba cek kembali detail pengajuanmu.")
+        st.markdown('<p class="error-message">❌ Pinjaman kamu kemungkinan <b>DITOLAK</b>. Coba cek kembali detail pengajuanmu.</p>', unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.write("💡 **Tips:** Pastikan semua informasi yang dimasukkan akurat untuk hasil prediksi yang lebih baik.")
