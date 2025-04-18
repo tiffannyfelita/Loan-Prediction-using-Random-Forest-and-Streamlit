@@ -5,9 +5,6 @@ import shap
 import matplotlib.pyplot as plt
 import xgboost as xgb
 
-# Untuk menonaktifkan warning shap
-shap.initjs()
-
 class LoanPredictor:
     def __init__(self):
         self.load_model()
