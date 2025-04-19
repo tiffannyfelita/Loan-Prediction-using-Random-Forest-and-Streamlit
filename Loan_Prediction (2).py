@@ -6,6 +6,8 @@ from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
 from sklearn.metrics import classification_report, accuracy_score
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Load model dan mapping
 @st.cache_resource
@@ -60,6 +62,19 @@ if choice == "Latih Ulang Model":
                 pickle.dump(model, f)
 
             st.success("✅ Model berhasil dilatih ulang dan disimpan!")
+
+            # Feature Importance
+            st.subheader("📌 Feature Importance")
+            importance = model.feature_importances_
+            feature_names = model.get_booster().feature_names
+            importance_df = pd.DataFrame({
+                "Feature": feature_names,
+                "Importance": importance
+            }).sort_values(by="Importance", ascending=False)
+
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sns.barplot(data=importance_df, x="Importance", y="Feature", palette="viridis", ax=ax)
+            st.pyplot(fig)
 
 elif choice == "Prediksi":
     st.header("💸 Simulasi Jumlah Pinjaman")
@@ -151,3 +166,15 @@ elif choice == "Prediksi":
             st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
         else:
             st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**. Coba cek kembali detail pengajuanmu.")
+
+        if st.checkbox("Lihat Faktor Penentu Prediksi (Feature Importance)"):
+            importance = model.feature_importances_
+            feature_names = model.get_booster().feature_names
+            importance_df = pd.DataFrame({
+                "Feature": feature_names,
+                "Importance": importance
+            }).sort_values(by="Importance", ascending=False)
+
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sns.barplot(data=importance_df, x="Importance", y="Feature", palette="coolwarm", ax=ax)
+            st.pyplot(fig)
