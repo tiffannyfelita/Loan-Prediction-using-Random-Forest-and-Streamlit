@@ -35,7 +35,7 @@ st.pyplot(fig1)
 
 st.subheader("Correlation Heatmap")
 fig2 = plt.figure(figsize=(12,6))
-sns.heatmap(data.corr(), annot=True, cmap='coolwarm')
+sns.heatmap(data.select_dtypes(include=np.number).corr(), annot=True, cmap='coolwarm')
 st.pyplot(fig2)
 
 # Preprocessing
