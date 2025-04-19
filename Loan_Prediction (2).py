@@ -76,6 +76,16 @@ if choice == "Prediksi":
         else:
             st.error("❌ Pinjaman kamu kemungkinan DITOLAK. Coba cek kembali detail pengajuanmu.")
 
+        st.write("🎯 Fitur yang dipakai model:", input_df.columns.tolist())
+        st.write("📊 Input data ke model:")
+        st.dataframe(input_df)
+        
+        # Coba prediksi probabilitas
+        proba = model.predict_proba(input_df)[0]
+        st.write("📈 Probabilitas prediksi:", proba)
+        prediction = int(proba[1] > 0.5)  # ambil probabilitas disetujui
+
+
 elif choice == "Informasi Fitur":
     st.title("📘 Informasi Fitur-Fitur Prediksi Pinjaman")
     st.markdown("Gunakan tabel di bawah ini untuk memahami arti dari masing-masing fitur dalam sistem prediksi pinjaman.")
@@ -114,3 +124,5 @@ elif choice == "Informasi Fitur":
         - Rasio penggunaan kredit
         - Permohonan kredit baru
         """)
+
+
