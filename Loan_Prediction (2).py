@@ -34,9 +34,13 @@ with st.form("loan_form"):
         home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
         education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
         previous_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
+        credit_score = st.slider("Skor Kredit (300 - 850)", min_value=300, max_value=850, value=650)
 
     with col2:
         income = st.number_input("Pendapatan Tahunan ($)", min_value=0)
+        emp_exp = st.number_input("Lama Bekerja (Tahun)", min_value=0)
+        age = st.number_input("Umur", min_value=18, max_value=100, value=35)
+        cred_hist_len = st.number_input("Lama Riwayat Kredit (Tahun)", min_value=0)
         loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=0)
         loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0)
         loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
@@ -51,9 +55,11 @@ if submitted:
         'loan_amnt': loan_amount,
         'loan_int_rate': loan_int_rate,
         'previous_loan_defaults_on_file': default_map[previous_default],
-        'person_age': 35,  # default
-        'person_emp_length': 5,  # default
-        'loan_percent_income': loan_amount / income if income > 0 else 0
+        'person_age': age,
+        'person_emp_exp': emp_exp,
+        'loan_percent_income': loan_amount / income if income > 0 else 0,
+        'cb_person_cred_hist_length': cred_hist_len,
+        'credit_score': credit_score
     }
 
     # One-hot encoding
