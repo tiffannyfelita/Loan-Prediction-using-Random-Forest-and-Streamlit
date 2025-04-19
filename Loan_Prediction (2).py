@@ -25,7 +25,26 @@ st.markdown("Masukkan detail di bawah untuk memprediksi apakah **pinjaman akan d
 education_map, default_map = load_mappings()
 model = load_model()
 
-# Form Input
+# Form Simulasi Pinjaman Umum
+st.header("💸 Simulasi Jumlah Pinjaman")
+
+total_kebutuhan = st.slider("Total Kebutuhan Dana", min_value=10_000_000, max_value=5_000_000_000, value=500_000_000, step=10_000_000)
+down_payment_pct = st.slider("Uang Muka (DP) (%)", min_value=0, max_value=100, value=10)
+down_payment = total_kebutuhan * down_payment_pct / 100
+jumlah_pinjaman = total_kebutuhan - down_payment
+
+durasi_tahun = st.slider("Durasi Pinjaman (Tahun)", min_value=1, max_value=30, value=5)
+bunga_efektif = st.number_input("Suku Bunga (eff. p.a.)", min_value=0.0, max_value=50.0, value=10.0)
+angsuran_per_bulan = np.pmt(bunga_efektif / 100 / 12, durasi_tahun * 12, -jumlah_pinjaman)
+
+st.markdown("---")
+st.subheader("📊 Hasil Simulasi")
+st.write(f"**Total Pinjaman:** Rp {int(jumlah_pinjaman):,}")
+st.write(f"**Angsuran / Bulan:** Rp {int(angsuran_per_bulan):,}")
+
+st.markdown("---")
+st.header("📋 Form Pengajuan & Prediksi")
+
 with st.form("loan_form"):
     col1, col2 = st.columns(2)
 
@@ -48,7 +67,6 @@ with st.form("loan_form"):
     submitted = st.form_submit_button("🔍 Prediksi Sekarang")
 
 if submitted:
-    # Manual encoding
     input_dict = {
         'person_income': income,
         'person_education': education_map[education],
@@ -62,7 +80,6 @@ if submitted:
         'credit_score': credit_score
     }
 
-    # One-hot encoding
     one_hot_features = {
         'person_gender_Male': 1 if gender == 'Male' else 0,
         'person_home_ownership_Own': 1 if home_ownership == 'Own' else 0,
@@ -78,14 +95,11 @@ if submitted:
     input_dict.update(one_hot_features)
     input_df = pd.DataFrame([input_dict])
 
-    # Reorder columns to match model input
     expected_features = model.get_booster().feature_names
     input_df = input_df.reindex(columns=expected_features, fill_value=0)
 
-    # Predict
     prediction = model.predict(input_df)[0]
 
-    # Output
     st.markdown("---")
     if prediction == 1:
         st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
