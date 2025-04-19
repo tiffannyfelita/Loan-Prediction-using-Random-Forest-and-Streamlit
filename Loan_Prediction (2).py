@@ -35,6 +35,7 @@ else:
     target_col = target_col[0]
 
 x = data.drop(target_col, axis=1)
+x = pd.get_dummies(x)
 scaler = MinMaxScaler()
 x_scaled = pd.DataFrame(scaler.fit_transform(x), columns=x.columns)
 
@@ -42,7 +43,7 @@ x_scaled = pd.DataFrame(scaler.fit_transform(x), columns=x.columns)
 st.sidebar.header("Make a Prediction")
 user_input = {}
 for col in x.columns:
-    val = st.sidebar.slider(col, float(data[col].min()), float(data[col].max()))
+    val = st.sidebar.slider(col, float(x[col].min()), float(x[col].max()))
     user_input[col] = val
 
 user_df = pd.DataFrame([user_input])
