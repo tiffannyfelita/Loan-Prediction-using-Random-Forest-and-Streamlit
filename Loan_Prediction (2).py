@@ -39,17 +39,17 @@ x = pd.get_dummies(x)
 scaler = MinMaxScaler()
 x_scaled = pd.DataFrame(scaler.fit_transform(x), columns=x.columns)
 
-# Sidebar Input
-st.sidebar.header("Make a Prediction")
+# User Input (Main Area)
+st.subheader("Input Features")
 user_input = {}
 for col in x.columns:
-    val = st.sidebar.slider(col, float(x[col].min()), float(x[col].max()))
+    val = st.slider(col, float(x[col].min()), float(x[col].max()))
     user_input[col] = val
 
 user_df = pd.DataFrame([user_input])
 user_df_scaled = scaler.transform(user_df)
 pred = model.predict(user_df_scaled)
 
-# Result
-st.sidebar.subheader("Prediction Result")
-st.sidebar.write(default_map_inv[pred[0]])
+# Prediction Result
+st.subheader("Prediction Result")
+st.write(f"**Prediction:** {default_map_inv[pred[0]]}")
