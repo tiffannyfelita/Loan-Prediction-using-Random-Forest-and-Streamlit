@@ -105,9 +105,14 @@ if submitted:
     expected_features = model.get_booster().feature_names
     input_df = input_df.reindex(columns=expected_features, fill_value=0)
 
-    prediction = model.predict(input_df)[0]
+    # Modifikasi ke prediksi probabilitas
+    probability = model.predict_proba(input_df)[0][1]
+    threshold = 0.35  # bisa disesuaikan
+    prediction = int(probability > threshold)
 
     st.markdown("---")
+    st.write(f"🎯 **Probabilitas Disetujui:** `{probability:.2%}` (threshold: {threshold})")
+
     if prediction == 1:
         st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
     else:
