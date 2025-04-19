@@ -91,11 +91,11 @@ elif choice == "📋 Formulir & Prediksi":
             credit_score = st.slider("Skor Kredit (300 - 850)", 300, 850, 650)
 
         with col2:
-            income = st.number_input("Pendapatan Tahunan ($)", 0, step=100)
+            income = st.slider("Pendapatan Tahunan ($)", 0, 500000, 100000, step=100)
             emp_exp = st.number_input("Lama Bekerja (Tahun)", 0)
             age = st.number_input("Umur", 18, 100, 35)
             cred_hist_len = st.number_input("Lama Riwayat Kredit (Tahun)", 0)
-            loan_amount = st.number_input("Jumlah Pinjaman ($)", 0, step=100)
+            loan_amount = st.slider("Jumlah Pinjaman ($)", 0, 100000, 10000, step=100)
             loan_int_rate = st.number_input("Bunga Pinjaman (%)", 0.0, 100.0)
             loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
 
