@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # Load model dan mapping
 @st.cache_resource
 def load_model():
-    with open("best_xgb_model.pkl", "rb") as f:
+    with open("xgb_model_smote.pkl", "rb") as f:
         return pickle.load(f)
 
 @st.cache_resource
