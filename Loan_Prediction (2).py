@@ -99,20 +99,6 @@ elif choice == "📋 Formulir & Prediksi":
             loan_int_rate = st.number_input("Bunga Pinjaman (%)", 0.0, 100.0)
             loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
 
-        if st.form_submit_button("🌟 Gunakan Data Ideal untuk Disetujui"):
-            gender = 'Male'
-            home_ownership = 'Own'
-            education = list(predictor.education_map.keys())[2]
-            previous_default = list(predictor.default_map.keys())[0]
-            credit_score = 750
-            income = 120000
-            emp_exp = 10
-            age = 40
-            cred_hist_len = 15
-            loan_amount = 10000
-            loan_int_rate = 6.5
-            loan_intent = 'EDUCATION'
-
         submitted = st.form_submit_button("🔍 Prediksi Sekarang")
 
     if submitted:
