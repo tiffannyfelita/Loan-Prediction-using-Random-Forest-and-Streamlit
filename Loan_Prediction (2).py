@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
-import numpy_financial as npf
-
 
 # Load model dan mapping
 @st.cache_resource
@@ -37,7 +35,14 @@ jumlah_pinjaman = total_kebutuhan - down_payment
 
 durasi_tahun = st.slider("Durasi Pinjaman (Tahun)", min_value=1, max_value=30, value=5)
 bunga_efektif = st.number_input("Suku Bunga (eff. p.a.)", min_value=0.0, max_value=50.0, value=10.0)
-angsuran_per_bulan = np.pmt(bunga_efektif / 100 / 12, durasi_tahun * 12, -jumlah_pinjaman)
+
+# Hitung angsuran per bulan secara manual tanpa numpy_financial
+r = bunga_efektif / 100 / 12
+n = durasi_tahun * 12
+if r > 0:
+    angsuran_per_bulan = (r * jumlah_pinjaman) / (1 - (1 + r)**-n)
+else:
+    angsuran_per_bulan = jumlah_pinjaman / n
 
 st.markdown("---")
 st.subheader("📊 Hasil Simulasi")
