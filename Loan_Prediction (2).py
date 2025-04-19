@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
+import numpy_financial as npf
+
 
 # Load model dan mapping
 @st.cache_resource
