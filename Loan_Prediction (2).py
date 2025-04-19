@@ -43,8 +43,17 @@ with st.expander("Data Summary"):
 st.subheader("Preprocessing")
 data.dropna(inplace=True)
 data.replace(education_map, inplace=True)
-x = data.drop('loan_default', axis=1)
-y = data['loan_default']
+
+# Determine target column safely
+target_col = [col for col in data.columns if 'loan' in col.lower() and 'default' in col.lower()]
+if not target_col:
+    st.error("Kolom target 'loan_default' tidak ditemukan.")
+    st.stop()
+else:
+    target_col = target_col[0]
+
+x = data.drop(target_col, axis=1)
+y = data[target_col]
 
 scaler = MinMaxScaler()
 x_scaled = pd.DataFrame(scaler.fit_transform(x), columns=x.columns)
