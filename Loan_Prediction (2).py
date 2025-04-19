@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 import pickle
 from xgboost import XGBClassifier
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 class LoanPredictor:
     def __init__(self):
@@ -12,7 +10,7 @@ class LoanPredictor:
         self.education_map, self.default_map = self.load_mappings()
 
     def load_model(self):
-        with open("best_xgb_model.pkl", "rb") as f:
+        with open("xgb_model_smote.pkl", "rb") as f:
             return pickle.load(f)
 
     def load_mappings(self):
@@ -30,24 +28,13 @@ class LoanPredictor:
         prediction = int(probability > 0.35)
         return prediction, probability
 
-    def feature_importance(self):
-        importance = self.model.feature_importances_
-        feature_names = self.model.get_booster().feature_names
-        return pd.DataFrame({"Feature": feature_names, "Importance": importance})
-
-    def visualize_feature_importance(self):
-        importance_df = self.feature_importance().sort_values(by="Importance", ascending=False)
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.barplot(data=importance_df, x="Importance", y="Feature", palette="coolwarm", ax=ax)
-        return fig
-
 # Streamlit App
 st.set_page_config(page_title="Prediksi Pinjaman", page_icon="💰", layout="centered")
 st.title("💳 Aplikasi Prediksi Kelolosan Pinjaman")
 
 predictor = LoanPredictor()
 
-menu = ["🏠 Beranda", "📋 Formulir & Prediksi", "📊 Visualisasi Model"]
+menu = ["🏠 Beranda", "💸 Simulasi Pinjaman", "📋 Formulir Prediksi"]
 choice = st.sidebar.selectbox("Navigasi", menu)
 
 if choice == "🏠 Beranda":
@@ -56,9 +43,7 @@ if choice == "🏠 Beranda":
     st.markdown("---")
     st.info("Pilih menu di sebelah kiri untuk mulai melakukan simulasi atau prediksi.")
 
-elif choice == "📋 Formulir & Prediksi":
-    st.markdown("Masukkan detail di bawah untuk memprediksi apakah **pinjaman akan disetujui** atau tidak.")
-
+elif choice == "💸 Simulasi Pinjaman":
     st.header("💸 Simulasi Jumlah Pinjaman")
     total_kebutuhan = st.slider("Total Kebutuhan Dana", 10_000_000, 5_000_000_000, 500_000_000, step=10_000_000)
     down_payment_pct = st.slider("Uang Muka (DP) (%)", 0, 100, 10)
@@ -77,7 +62,7 @@ elif choice == "📋 Formulir & Prediksi":
     st.write(f"**Total Pinjaman:** Rp {int(jumlah_pinjaman):,}")
     st.write(f"**Angsuran / Bulan:** Rp {int(angsuran_per_bulan):,}")
 
-    st.markdown("---")
+elif choice == "📋 Formulir Prediksi":
     st.header("📋 Form Pengajuan & Prediksi")
 
     with st.form("loan_form"):
@@ -98,6 +83,20 @@ elif choice == "📋 Formulir & Prediksi":
             loan_amount = st.slider("Jumlah Pinjaman ($)", 0, 100000, 10000, step=100)
             loan_int_rate = st.number_input("Bunga Pinjaman (%)", 0.0, 100.0)
             loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
+
+        if st.form_submit_button("🌟 Gunakan Data Ideal untuk Disetujui"):
+            gender = 'Male'
+            home_ownership = 'Own'
+            education = list(predictor.education_map.keys())[2]
+            previous_default = list(predictor.default_map.keys())[0]
+            credit_score = 750
+            income = 120000
+            emp_exp = 10
+            age = 40
+            cred_hist_len = 15
+            loan_amount = 10000
+            loan_int_rate = 6.5
+            loan_intent = 'EDUCATION'
 
         submitted = st.form_submit_button("🔍 Prediksi Sekarang")
 
@@ -126,13 +125,10 @@ elif choice == "📋 Formulir & Prediksi":
 
         prediction, probability = predictor.predict(input_dict)
 
+        st.markdown("---")
+        st.write(f"🎯 **Probabilitas Disetujui:** `{probability:.2%}` (threshold: 0.35)")
 
         if prediction == 1:
             st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
         else:
             st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**. Coba cek kembali detail pengajuanmu.")
-
-elif choice == "📊 Visualisasi Model":
-    st.subheader("🔍 Visualisasi Feature Importance")
-    fig = predictor.visualize_feature_importance()
-    st.pyplot(fig)
