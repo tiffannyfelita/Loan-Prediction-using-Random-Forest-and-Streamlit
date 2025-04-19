@@ -57,17 +57,17 @@ with st.form("loan_form"):
 
     with col1:
         gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
-        home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
+        home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage','Other'])
         education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
         previous_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
         credit_score = st.slider("Skor Kredit (300 - 850)", min_value=300, max_value=850, value=650)
 
     with col2:
-        income = st.number_input("Pendapatan Tahunan ($)", min_value=0)
+        income = st.number_input("Pendapatan Tahunan (x100$)", min_value=0) * 100
         emp_exp = st.number_input("Lama Bekerja (Tahun)", min_value=0)
         age = st.number_input("Umur", min_value=18, max_value=100, value=35)
         cred_hist_len = st.number_input("Lama Riwayat Kredit (Tahun)", min_value=0)
-        loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=0)
+        loan_amount = st.number_input("Jumlah Pinjaman (x100$)", min_value=0) * 100
         loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0)
         loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
 
