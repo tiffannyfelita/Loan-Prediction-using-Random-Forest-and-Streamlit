@@ -126,8 +126,6 @@ elif choice == "📋 Formulir & Prediksi":
 
         prediction, probability = predictor.predict(input_dict)
 
-        st.markdown("---")
-        st.write(f"🎯 **Probabilitas Disetujui:** `{probability:.2%}` (threshold: 0.35)")
 
         if prediction == 1:
             st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
