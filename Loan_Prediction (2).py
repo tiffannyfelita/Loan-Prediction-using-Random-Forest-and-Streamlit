@@ -12,7 +12,7 @@ class LoanPredictor:
         self.education_map, self.default_map = self.load_mappings()
 
     def load_model(self):
-        with open("xgb_model_smote.pkl", "rb") as f:
+        with open("best_xgb_model.pkl", "rb") as f:
             return pickle.load(f)
 
     def load_mappings(self):
