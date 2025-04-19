@@ -1,9 +1,9 @@
 import streamlit as st
-import pickle
 import pandas as pd
 import numpy as np
+import pickle
 
-# Load the model and encoding mappings
+# Load model dan mapping
 @st.cache_resource
 def load_model():
     with open("best_xgb_model.pkl", "rb") as f:
@@ -17,114 +17,98 @@ def load_mappings():
         default_map = pickle.load(f)
     return education_map, default_map
 
-model = load_model()
+# UI Setup
+st.set_page_config(page_title="Prediksi Pinjaman", page_icon="💰", layout="centered")
+st.title("💳 Prediksi Kelolosan Pinjaman")
+st.markdown("Masukkan detail di bawah untuk memprediksi apakah **pinjaman akan disetujui** atau tidak.")
+
 education_map, default_map = load_mappings()
+model = load_model()
 
-# Create the Streamlit app
-st.title("Loan Approval Prediction System")
+# Form Simulasi Pinjaman Umum
+st.header("💸 Simulasi Jumlah Pinjaman")
 
-st.write("""
-This application predicts the likelihood of a loan being approved based on applicant information.
-Please fill in the details below and click 'Predict' to see the result.
-""")
+total_kebutuhan = st.slider("Total Kebutuhan Dana", min_value=10_000_000, max_value=5_000_000_000, value=500_000_000, step=10_000_000)
+down_payment_pct = st.slider("Uang Muka (DP) (%)", min_value=0, max_value=100, value=10)
+down_payment = total_kebutuhan * down_payment_pct / 100
+jumlah_pinjaman = total_kebutuhan - down_payment
 
-# Input fields
-col1, col2 = st.columns(2)
+durasi_tahun = st.slider("Durasi Pinjaman (Tahun)", min_value=1, max_value=30, value=5)
+bunga_efektif = st.number_input("Suku Bunga (eff. p.a.)", min_value=0.0, max_value=50.0, value=10.0)
 
-with col1:
-    person_age = st.number_input("Age", min_value=18, max_value=100, value=30)
-    person_gender = st.selectbox("Gender", options=['Male', 'Female'])
-    person_education = st.selectbox("Education Level", options=list(education_map.keys()))
-    person_income = st.number_input("Annual Income ($)", min_value=0, value=50000)
-    person_emp_exp = st.number_input("Employment Experience (years)", min_value=0, max_value=50, value=5)
-    
-with col2:
-    person_home_ownership = st.selectbox("Home Ownership", options=['Rent', 'Own', 'Mortgage', 'Other'])
-    loan_amnt = st.number_input("Loan Amount ($)", min_value=0, value=20000)
-    loan_intent = st.selectbox("Loan Purpose", options=['Personal', 'Education', 'Medical', 'Venture', 'Home', 'Debt'])
-    loan_int_rate = st.slider("Interest Rate (%)", min_value=0.0, max_value=30.0, value=10.0, step=0.1)
-    cb_person_cred_hist_length = st.number_input("Credit History Length (years)", min_value=0, max_value=50, value=5)
-    credit_score = st.number_input("Credit Score", min_value=300, max_value=850, value=700)
-    previous_loan_defaults_on_file = st.selectbox("Previous Defaults", options=list(default_map.keys()))
+# Hitung angsuran per bulan secara manual tanpa numpy_financial
+r = bunga_efektif / 100 / 12
+n = durasi_tahun * 12
+if r > 0:
+    angsuran_per_bulan = (r * jumlah_pinjaman) / (1 - (1 + r)**-n)
+else:
+    angsuran_per_bulan = jumlah_pinjaman / n
 
-# Calculate loan percent income
-loan_percent_income = (loan_amnt / person_income) * 100 if person_income > 0 else 0
-st.write(f"Loan Percentage of Income: {loan_percent_income:.2f}%")
+st.markdown("---")
+st.subheader("📊 Hasil Simulasi")
+st.write(f"**Total Pinjaman:** Rp {int(jumlah_pinjaman):,}")
+st.write(f"**Angsuran / Bulan:** Rp {int(angsuran_per_bulan):,}")
 
-# Prediction button
-if st.button("Predict Loan Approval"):
-    # Create input dataframe
-    input_data = pd.DataFrame({
-        'person_age': [person_age],
-        'person_income': [person_income],
-        'person_emp_exp': [person_emp_exp],
-        'loan_amnt': [loan_amnt],
-        'loan_int_rate': [loan_int_rate],
-        'loan_percent_income': [loan_percent_income],
-        'cb_person_cred_hist_length': [cb_person_cred_hist_length],
-        'credit_score': [credit_score],
-        'person_gender': [person_gender],
-        'person_education': [person_education],
-        'person_home_ownership': [person_home_ownership],
-        'loan_intent': [loan_intent],
-        'previous_loan_defaults_on_file': [previous_loan_defaults_on_file]
-    })
-    
-    # Apply encoding from pickle files
-    input_data['person_education'] = input_data['person_education'].map(education_map)
-    input_data['previous_loan_defaults_on_file'] = input_data['previous_loan_defaults_on_file'].map(default_map)
-    
-    # One-hot encoding for other categorical variables
-    categorical_cols = ['person_gender', 'person_home_ownership', 'loan_intent']
-    input_data = pd.get_dummies(input_data, columns=categorical_cols, drop_first=True)
-    
-    # Ensure all expected columns are present (add missing columns with 0)
-    # Note: You should replace this with your actual model's expected columns
-    expected_columns = [
-        'person_age', 'person_income', 'person_emp_exp', 'loan_amnt',
-        'loan_int_rate', 'loan_percent_income', 'cb_person_cred_hist_length',
-        'credit_score', 'person_education', 'previous_loan_defaults_on_file',
-        'person_gender_Male', 'person_home_ownership_Mortgage',
-        'person_home_ownership_Other', 'person_home_ownership_Own',
-        'loan_intent_Education', 'loan_intent_Home', 'loan_intent_Medical',
-        'loan_intent_Personal', 'loan_intent_Venture'
-    ]
-    
-    for col in expected_columns:
-        if col not in input_data.columns:
-            input_data[col] = 0
-    
-    # Reorder columns to match training data
-    input_data = input_data[expected_columns]
-    
-    # Make prediction
-    prediction = model.predict(input_data)
-    prediction_proba = model.predict_proba(input_data)
-    
-    # Display results
-    if prediction[0] == 1:
-        st.error("Loan Application: **Denied**")
-        st.write(f"Probability of denial: {prediction_proba[0][1]*100:.2f}%")
+st.markdown("---")
+st.header("📋 Form Pengajuan & Prediksi")
+
+with st.form("loan_form"):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
+        home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
+        education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
+        previous_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
+        credit_score = st.slider("Skor Kredit (300 - 850)", min_value=300, max_value=850, value=650)
+
+    with col2:
+        income = st.number_input("Pendapatan Tahunan ($)", min_value=0, step=100)
+        emp_exp = st.number_input("Lama Bekerja (Tahun)", min_value=0)
+        age = st.number_input("Umur", min_value=18, max_value=100, value=35)
+        cred_hist_len = st.number_input("Lama Riwayat Kredit (Tahun)", min_value=0)
+        loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=0, step=100)
+        loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0)
+        loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
+
+    submitted = st.form_submit_button("🔍 Prediksi Sekarang")
+
+if submitted:
+    input_dict = {
+        'person_income': income,
+        'person_education': education_map[education],
+        'loan_amnt': loan_amount,
+        'loan_int_rate': loan_int_rate,
+        'previous_loan_defaults_on_file': default_map[previous_default],
+        'person_age': age,
+        'person_emp_exp': emp_exp,
+        'loan_percent_income': loan_amount / income if income > 0 else 0,
+        'cb_person_cred_hist_length': cred_hist_len,
+        'credit_score': credit_score
+    }
+
+    one_hot_features = {
+        'person_gender_Male': 1 if gender == 'Male' else 0,
+        'person_home_ownership_Own': 1 if home_ownership == 'Own' else 0,
+        'person_home_ownership_Rent': 1 if home_ownership == 'Rent' else 0,
+        'loan_intent_EDUCATION': 1 if loan_intent == 'EDUCATION' else 0,
+        'loan_intent_HOMEIMPROVEMENT': 1 if loan_intent == 'HOMEIMPROVEMENT' else 0,
+        'loan_intent_MEDICAL': 1 if loan_intent == 'MEDICAL' else 0,
+        'loan_intent_PERSONAL': 1 if loan_intent == 'PERSONAL' else 0,
+        'loan_intent_VENTURE': 1 if loan_intent == 'VENTURE' else 0,
+        'loan_intent_DEBTCONSOLIDATION': 1 if loan_intent == 'DEBTCONSOLIDATION' else 0,
+    }
+
+    input_dict.update(one_hot_features)
+    input_df = pd.DataFrame([input_dict])
+
+    expected_features = model.get_booster().feature_names
+    input_df = input_df.reindex(columns=expected_features, fill_value=0)
+
+    prediction = model.predict(input_df)[0]
+
+    st.markdown("---")
+    if prediction == 1:
+        st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
     else:
-        st.success("Loan Application: **Approved**")
-        st.write(f"Probability of approval: {prediction_proba[0][0]*100:.2f}%")
-    
-    # Show feature importance if available
-    try:
-        st.subheader("Key Factors Influencing Decision")
-        feature_importance = pd.DataFrame({
-            'Feature': model.feature_names_in_,
-            'Importance': model.feature_importances_
-        }).sort_values('Importance', ascending=False)
-        
-        st.bar_chart(feature_importance.set_index('Feature'))
-    except AttributeError:
-        pass
-
-# Add some explanations
-st.markdown("""
-### About the Model
-- This prediction is based on an XGBoost machine learning model trained on historical loan data.
-- The model considers various factors including credit history, income, loan amount, and more.
-- Predictions are estimates only and should be used as one of several decision-making tools.
-""")
+        st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**. Coba cek kembali detail pengajuanmu.")
