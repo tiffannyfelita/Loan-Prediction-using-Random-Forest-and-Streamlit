@@ -40,6 +40,7 @@ choice = st.sidebar.selectbox("Navigasi", menu)
 if choice == "🏠 Beranda":
     st.subheader("Selamat datang di Aplikasi Prediksi Pinjaman! 💸")
     st.write("Aplikasi ini membantu Anda melakukan simulasi pinjaman dan memprediksi kemungkinan pinjaman Anda akan disetujui atau tidak.")
+    st.write("UTS Model Deployment 2025 - Tiffanny Felita")
     st.markdown("---")
     st.info("Pilih menu di sebelah kiri untuk mulai melakukan simulasi atau prediksi.")
 
