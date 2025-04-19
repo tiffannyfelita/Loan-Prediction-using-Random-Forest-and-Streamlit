@@ -1,21 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
 import pickle
-
-# Load dataset untuk ambil struktur fitur
-@st.cache_data
-def load_data():
-    return pd.read_csv("Dataset_A_loan.csv")
-
-# Preprocessing sederhana sesuai dengan notebook
-# (kita sesuaikan nanti jika ada encoding lebih lanjut)
-def preprocess_input(input_dict):
-    df = pd.DataFrame([input_dict])
-    df['person_gender'].replace('fe male', 'female', inplace=True)
-    df['person_gender'].replace('Male', 'male', inplace=True)
-    return df
 
 # Load model dan mapping
 @st.cache_resource
@@ -31,49 +17,71 @@ def load_mappings():
         default_map = pickle.load(f)
     return education_map, default_map
 
-# App UI
-st.title("Loan Approval Prediction")
-st.write("Masukkan detail peminjam untuk prediksi status pinjaman.")
+# UI Setup
+st.set_page_config(page_title="Prediksi Pinjaman", page_icon="💰", layout="centered")
+st.title("💳 Prediksi Kelolosan Pinjaman")
+st.markdown("Masukkan detail di bawah untuk memprediksi apakah **pinjaman akan disetujui** atau tidak.")
 
-data = load_data()
+education_map, default_map = load_mappings()
+model = load_model()
 
-# Helper function untuk handle kolom tidak tersedia
-def safe_selectbox(label, df, column_name, default_options):
-    if column_name in df.columns:
-        return st.selectbox(label, df[column_name].dropna().unique())
+# Form Input
+with st.form("loan_form"):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
+        home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
+        education = st.selectbox("Pendidikan Terakhir", list(education_map.keys()))
+        previous_default = st.selectbox("Pernah Gagal Bayar?", list(default_map.keys()))
+
+    with col2:
+        income = st.number_input("Pendapatan Tahunan ($)", min_value=0)
+        loan_amount = st.number_input("Jumlah Pinjaman ($)", min_value=0)
+        loan_int_rate = st.number_input("Bunga Pinjaman (%)", min_value=0.0, max_value=100.0)
+        loan_intent = st.selectbox("Tujuan Pinjaman", ['VENTURE', 'EDUCATION', 'PERSONAL', 'MEDICAL', 'HOMEIMPROVEMENT', 'DEBTCONSOLIDATION'])
+
+    submitted = st.form_submit_button("🔍 Prediksi Sekarang")
+
+if submitted:
+    # Manual encoding
+    input_dict = {
+        'person_income': income,
+        'person_education': education_map[education],
+        'loan_amnt': loan_amount,
+        'loan_int_rate': loan_int_rate,
+        'previous_loan_defaults_on_file': default_map[previous_default],
+        'person_age': 35,  # default
+        'person_emp_length': 5,  # default
+        'loan_percent_income': loan_amount / income if income > 0 else 0
+    }
+
+    # One-hot encoding
+    one_hot_features = {
+        'person_gender_Male': 1 if gender == 'Male' else 0,
+        'person_home_ownership_Own': 1 if home_ownership == 'Own' else 0,
+        'person_home_ownership_Rent': 1 if home_ownership == 'Rent' else 0,
+        'loan_intent_EDUCATION': 1 if loan_intent == 'EDUCATION' else 0,
+        'loan_intent_HOMEIMPROVEMENT': 1 if loan_intent == 'HOMEIMPROVEMENT' else 0,
+        'loan_intent_MEDICAL': 1 if loan_intent == 'MEDICAL' else 0,
+        'loan_intent_PERSONAL': 1 if loan_intent == 'PERSONAL' else 0,
+        'loan_intent_VENTURE': 1 if loan_intent == 'VENTURE' else 0,
+        'loan_intent_DEBTCONSOLIDATION': 1 if loan_intent == 'DEBTCONSOLIDATION' else 0,
+    }
+
+    input_dict.update(one_hot_features)
+    input_df = pd.DataFrame([input_dict])
+
+    # Reorder columns to match model input
+    expected_features = model.get_booster().feature_names
+    input_df = input_df.reindex(columns=expected_features, fill_value=0)
+
+    # Predict
+    prediction = model.predict(input_df)[0]
+
+    # Output
+    st.markdown("---")
+    if prediction == 1:
+        st.success("✅ Pinjaman kamu kemungkinan **DISETUJUI**! Selamat! 🎉")
     else:
-        return st.selectbox(label, default_options)
-
-# Buat form input sesuai fitur penting
-with st.form("prediction_form"):
-    person_age = st.number_input("Umur", min_value=18, max_value=100, value=30)
-    person_income = st.number_input("Pendapatan", value=50000)
-    person_home_ownership = safe_selectbox("Status Tempat Tinggal", data, 'person_home_ownership', ['RENT', 'OWN', 'MORTGAGE'])
-    person_emp_length = st.number_input("Lama Bekerja (tahun)", min_value=0, max_value=50, value=5)
-    loan_intent = safe_selectbox("Tujuan Pinjaman", data, 'loan_intent', ['EDUCATION', 'PERSONAL', 'VENTURE', 'MEDICAL'])
-    loan_grade = safe_selectbox("Grade Pinjaman", data, 'loan_grade', ['A', 'B', 'C', 'D'])
-    loan_amnt = st.number_input("Jumlah Pinjaman", value=10000)
-    loan_int_rate = st.number_input("Suku Bunga (%)", value=10.5)
-    loan_percent_income = st.number_input("Persentase dari Pendapatan", value=0.2)
-    person_gender = st.selectbox("Jenis Kelamin", ['male', 'female'])
-    submitted = st.form_submit_button("Prediksi")
-
-    if submitted:
-        input_data = {
-            'person_age': person_age,
-            'person_income': person_income,
-            'person_home_ownership': person_home_ownership,
-            'person_emp_length': person_emp_length,
-            'loan_intent': loan_intent,
-            'loan_grade': loan_grade,
-            'loan_amnt': loan_amnt,
-            'loan_int_rate': loan_int_rate,
-            'loan_percent_income': loan_percent_income,
-            'person_gender': person_gender
-        }
-
-        input_df = preprocess_input(input_data)
-
-        model = load_model()
-        prediction = model.predict(input_df)[0]
-        st.success(f"Prediksi status pinjaman: {'Disetujui' if prediction == 1 else 'Ditolak'}")
+        st.error("❌ Pinjaman kamu kemungkinan **DITOLAK**. Coba cek kembali detail pengajuanmu.")
