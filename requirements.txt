@@ -11,3 +11,4 @@ pandas
 streamlit
 shap 
 imbalanced-learn
+missingno
