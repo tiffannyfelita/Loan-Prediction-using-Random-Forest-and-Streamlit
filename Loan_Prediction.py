@@ -71,7 +71,7 @@ elif choice == "📋 Formulir Prediksi":
 
         with col1:
             gender = st.selectbox("Jenis Kelamin", ['Male', 'Female'])
-            home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage'])
+            home_ownership = st.selectbox("Status Tempat Tinggal", ['Rent', 'Own', 'Mortgage','Other'])
             education = st.selectbox("Pendidikan Terakhir", list(predictor.education_map.keys()))
             previous_default = st.selectbox("Pernah Gagal Bayar?", list(predictor.default_map.keys()))
             credit_score = st.slider("Skor Kredit (300 - 850)", 300, 850, 650)
@@ -102,6 +102,7 @@ elif choice == "📋 Formulir Prediksi":
             'person_gender_Male': 1 if gender == 'Male' else 0,
             'person_home_ownership_Own': 1 if home_ownership == 'Own' else 0,
             'person_home_ownership_Rent': 1 if home_ownership == 'Rent' else 0,
+            'person_home_ownership_Other': 1 if home_ownership == 'Other' else 0,
             'loan_intent_EDUCATION': 1 if loan_intent == 'EDUCATION' else 0,
             'loan_intent_HOMEIMPROVEMENT': 1 if loan_intent == 'HOMEIMPROVEMENT' else 0,
             'loan_intent_MEDICAL': 1 if loan_intent == 'MEDICAL' else 0,
